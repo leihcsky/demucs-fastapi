@@ -6,3 +6,8 @@ outputs/
 temp/
 .env
 venv/
+API_DOCUMENTATION.md
+FEATURE_SUMMARY.md
+QUICK_REFERENCE.md
+DOWNLOAD_API_USAGE.md
+test_download.py
