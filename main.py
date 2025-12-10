@@ -71,6 +71,14 @@ class StemType(str, Enum):
     four_stems = "4stems"
     six_stems = "6stems"
 
+class SoundSource(str, Enum):
+    vocals = "vocals"
+    bass = "bass"
+    drums = "drums"
+    other = "other"
+    piano = "piano"
+    guitar = "guitar"
+
 class TaskStatus(str, Enum):
     pending = "pending"
     processing = "processing"
@@ -85,6 +93,7 @@ class SeparationRequest(BaseModel):
     mp3_rate: int = Field(default=320, description="MP3 比特率")
     float32: bool = Field(default=False, description="使用 float32 精度")
     int24: bool = Field(default=False, description="使用 int24 精度")
+    sound_source: Optional[SoundSource] = Field(default=None, description="指定声音来源")
 
 class TaskInfo(BaseModel):
     task_id: str
@@ -203,7 +212,8 @@ def separate_audio(
     mp3_rate: int = 320,
     float32: bool = False,
     int24: bool = False,
-    stems: StemType = StemType.four_stems
+    stems: StemType = StemType.four_stems,
+    sound_source: Optional[SoundSource] = None
 ) -> List[Path]:
     try:
         args = [
@@ -214,7 +224,14 @@ def separate_audio(
         ]
         # 分离人声和伴奏
         if stems and stems == StemType.two_stems:
-            args.append("--two-stems=vocals")
+            if sound_source:
+                args.append(f"--two-stems={sound_source.value}")
+            else:
+                args.append("--two-stems=vocals")
+        
+        if stems and stems == StemType.six_stems:
+            if sound_source:
+                args.append(f"--two-stems={sound_source.value}")
 
         if mp3:
             args.extend(["--mp3", f"--mp3-bitrate={mp3_rate}"])
@@ -273,7 +290,8 @@ async def process_task(task_id: str, file_path: Path, request: SeparationRequest
             request.mp3_rate,
             request.float32,
             request.int24,
-            request.stems
+            request.stems,
+            request.sound_source
         )
         
         task.progress = 0.9
@@ -347,7 +365,8 @@ async def separate(
     mp3: bool = Query(True),
     mp3_rate: int = Query(320),
     float32: bool = Query(False),
-    int24: bool = Query(False)
+    int24: bool = Query(False),
+    sound_source: Optional[SoundSource] = Query(None)
 ):
     try:
         task_id = str(uuid.uuid4())
@@ -372,7 +391,8 @@ async def separate(
             mp3=mp3,
             mp3_rate=mp3_rate,
             float32=float32,
-            int24=int24
+            int24=int24,
+            sound_source=sound_source
         )
         
         if use_queue:
