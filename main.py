@@ -139,7 +139,7 @@ def convert_audio_format(
 
     Args:
         input_path: 输入文件路径
-        output_format: 目标格式 (wav, mp3, flac)
+        output_format: 目标格式 (wav, mp3, flac, m4a, ogg)
         output_dir: 输出目录，默认为临时目录
 
     Returns:
@@ -176,6 +176,19 @@ def convert_audio_format(
     elif output_format == "wav":
         cmd.extend([
             "-codec:a", "pcm_s16le",
+            "-ar", "44100"
+        ])
+    elif output_format == "m4a":
+        cmd.extend([
+            "-codec:a", "aac",
+            "-b:a", "256k",
+            "-ar", "44100",
+            "-movflags", "+faststart"
+        ])
+    elif output_format == "ogg":
+        cmd.extend([
+            "-codec:a", "libvorbis",
+            "-q:a", "5",
             "-ar", "44100"
         ])
 
@@ -528,14 +541,14 @@ async def download_file(
 @app.post("/convert")
 async def convert_audio(
     file: UploadFile = File(...),
-    format: str = Query(..., description="目标格式: wav, mp3, flac")
+    format: str = Query(..., description="目标格式: wav, mp3, flac, m4a, ogg")
 ):
     """
     音频格式转换接口
 
     参数:
         - file: 上传的音频文件
-        - format: 目标格式 (wav, mp3, flac)
+        - format: 目标格式 (wav, mp3, flac, m4a, ogg)
 
     返回:
         转换后的音频文件（如果已是目标格式则直接返回原文件）
@@ -543,7 +556,7 @@ async def convert_audio(
     try:
         # 验证目标格式
         target_format = format.lower()
-        supported_formats = ['wav', 'mp3', 'flac']
+        supported_formats = ['wav', 'mp3', 'flac', 'm4a', 'ogg']
         if target_format not in supported_formats:
             raise HTTPException(
                 status_code=400,
@@ -571,7 +584,9 @@ async def convert_audio(
             mime_types = {
                 'mp3': 'audio/mpeg',
                 'wav': 'audio/wav',
-                'flac': 'audio/flac'
+                'flac': 'audio/flac',
+                'm4a': 'audio/mp4',
+                'ogg': 'audio/ogg'
             }
             media_type = mime_types.get(target_format, 'application/octet-stream')
 
